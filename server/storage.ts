@@ -7,7 +7,7 @@ import {
   UserRole
 } from "@shared/schema";
 import session from "express-session";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { eq, and, gt, lte, desc } from "drizzle-orm";
 import connectPgSimple from "connect-pg-simple";
 import memorystore from 'memorystore';
@@ -329,9 +329,7 @@ export class DatabaseStorage implements IStorage {
 
   constructor() {
     this.sessionStore = new PostgresSessionStore({
-      conObject: {
-        connectionString: process.env.DATABASE_URL,
-      },
+      pool: pool,
       createTableIfMissing: true
     });
     
