@@ -228,12 +228,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Video Routes
   app.get('/api/videos', async (req, res) => {
     const category = req.query.category as string | undefined;
+    const isAdmin = req.query.isAdmin === 'true';
+    const now = new Date();
     
     let videos;
     if (category) {
       videos = await storage.getVideosByCategory(category);
     } else {
       videos = await storage.getVideos();
+    }
+    
+    // Filter videos based on visibility rules:
+    // 1. If admin view, show all videos
+    // 2. If regular user view, only show videos that are currently live
+    if (!isAdmin) {
+      videos = videos.filter(video => {
+        // For streams with scheduled times
+        if (video.startTime && video.endTime) {
+          return video.startTime <= now && now <= video.endTime && video.isLive;
+        }
+        // For videos that are always live (no specific schedule)
+        return video.isLive === true;
+      });
     }
     
     res.status(200).json(videos);
@@ -248,6 +264,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const video = await storage.getVideo(id);
     if (!video) {
       return res.status(404).json({ message: "Video not found" });
+    }
+    
+    // Check if user is admin or if the video is currently live
+    const isAdmin = req.query.isAdmin === 'true';
+    if (!isAdmin) {
+      const now = new Date();
+      
+      // Check if the video is currently live
+      const isVideoLive = video.isLive && 
+        (!video.startTime || (video.startTime && video.startTime <= now)) && 
+        (!video.endTime || (video.endTime && now <= video.endTime));
+      
+      if (!isVideoLive) {
+        return res.status(404).json({ message: "Video not found or not currently available" });
+      }
     }
     
     res.status(200).json(video);
@@ -306,6 +337,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Toggle video visibility (make it live or not)
+  app.put('/api/videos/:id/toggle-visibility', requireAuth, requireRole([UserRole.ADMIN, UserRole.CHANNEL_ADMIN]), async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
+    
+    const video = await storage.getVideo(id);
+    if (!video) {
+      return res.status(404).json({ message: "Video not found" });
+    }
+    
+    // Check if user has permission (admins can toggle any video, channel admins only their own)
+    if (req.session?.userId && video.userId !== req.session.userId) {
+      const user = await storage.getUser(req.session.userId);
+      if (!user || user.role !== UserRole.ADMIN) {
+        return res.status(403).json({ message: "You don't have permission to modify this video" });
+      }
+    }
+    
+    try {
+      // Toggle the isLive status
+      const updatedVideo = await storage.updateVideo(id, { 
+        isLive: !video.isLive,
+        // If making it live again and there's no valid endTime, set it to a future date
+        endTime: (!video.isLive && (!video.endTime || new Date(video.endTime) < new Date())) ? 
+          new Date(Date.now() + 24 * 60 * 60 * 1000) : // 24 hours from now
+          video.endTime
+      });
+      
+      if (!updatedVideo) {
+        return res.status(500).json({ message: "Failed to update video visibility" });
+      }
+      
+      res.status(200).json({
+        message: updatedVideo.isLive ? "Video is now live" : "Video is now offline",
+        video: updatedVideo
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update video visibility" });
+    }
+  });
+
   app.delete('/api/videos/:id', requireAuth, requireRole([UserRole.ADMIN, UserRole.CHANNEL_ADMIN]), async (req, res) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
@@ -339,12 +413,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Stream Routes
   app.get('/api/streams/live', async (req, res) => {
+    const isAdmin = req.query.isAdmin === 'true';
+    const now = new Date();
+    
+    // Get all streams
     const liveStreams = await storage.getLiveStreams();
+    
+    // Filter streams based on visibility rules if not admin
+    if (!isAdmin) {
+      // Only return streams that are currently live
+      const filteredStreams = liveStreams.filter(stream => 
+        stream.isLive === true && 
+        stream.startTime <= now && 
+        (stream.endTime === null || now <= stream.endTime)
+      );
+      return res.status(200).json(filteredStreams);
+    }
+    
     res.status(200).json(liveStreams);
   });
   
   app.get('/api/streams/upcoming', async (req, res) => {
+    const isAdmin = req.query.isAdmin === 'true';
+    const now = new Date();
+    
+    // Get all upcoming streams
     const upcomingStreams = await storage.getUpcomingStreams();
+    
+    // Filter streams based on visibility rules if not admin
+    if (!isAdmin) {
+      // Only return streams that are scheduled to be live in the future
+      const filteredStreams = upcomingStreams.filter(stream => 
+        stream.isLive === true
+      );
+      return res.status(200).json(filteredStreams);
+    }
+    
     res.status(200).json(upcomingStreams);
   });
   
@@ -357,6 +461,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const stream = await storage.getStream(id);
     if (!stream) {
       return res.status(404).json({ message: "Stream not found" });
+    }
+    
+    // Check if user is admin or if the stream is currently live
+    const isAdmin = req.query.isAdmin === 'true';
+    if (!isAdmin) {
+      const now = new Date();
+      
+      // Check if the stream is currently live
+      const isStreamLive = stream.isLive && 
+        (!stream.startTime || (stream.startTime && stream.startTime <= now)) && 
+        (!stream.endTime || (stream.endTime && now <= stream.endTime));
+      
+      if (!isStreamLive) {
+        return res.status(404).json({ message: "Stream not found or not currently available" });
+      }
     }
     
     res.status(200).json(stream);
@@ -415,6 +534,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Toggle stream visibility (make it live or not)
+  app.put('/api/streams/:id/toggle-visibility', requireAuth, requireRole([UserRole.ADMIN, UserRole.CHANNEL_ADMIN]), async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
+    
+    const stream = await storage.getStream(id);
+    if (!stream) {
+      return res.status(404).json({ message: "Stream not found" });
+    }
+    
+    // Check if user has permission (admins can toggle any stream, channel admins only their own)
+    if (req.session?.userId && stream.userId !== req.session.userId) {
+      const user = await storage.getUser(req.session.userId);
+      if (!user || user.role !== UserRole.ADMIN) {
+        return res.status(403).json({ message: "You don't have permission to modify this stream" });
+      }
+    }
+    
+    try {
+      // Toggle the isLive status
+      const updatedStream = await storage.updateStream(id, { 
+        isLive: !stream.isLive,
+        // If making it live again and there's no valid endTime, set it to a future date
+        endTime: (!stream.isLive && (!stream.endTime || new Date(stream.endTime) < new Date())) ? 
+          new Date(Date.now() + 24 * 60 * 60 * 1000) : // 24 hours from now
+          stream.endTime
+      });
+      
+      if (!updatedStream) {
+        return res.status(500).json({ message: "Failed to update stream visibility" });
+      }
+      
+      res.status(200).json({
+        message: updatedStream.isLive ? "Stream is now live" : "Stream is now offline",
+        stream: updatedStream
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update stream visibility" });
+    }
+  });
+
   app.delete('/api/streams/:id', requireAuth, requireRole([UserRole.ADMIN, UserRole.CHANNEL_ADMIN]), async (req, res) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
