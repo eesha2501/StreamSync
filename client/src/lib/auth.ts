@@ -16,14 +16,32 @@ const googleProvider = new GoogleAuthProvider();
 // Sign in with Google using popup
 export const signInWithGoogle = async () => {
   try {
+    console.log("Starting Google sign-in process");
+    
+    // Configure the Google provider with additional scopes if needed
+    googleProvider.addScope('profile');
+    googleProvider.addScope('email');
+    
+    // Set custom parameters for prompt and select_account
+    googleProvider.setCustomParameters({
+      prompt: 'select_account'
+    });
+    
+    console.log("Google provider configured, initiating popup");
     const result = await signInWithPopup(auth, googleProvider);
+    console.log("Popup completed successfully");
+    
     // This gives you a Google Access Token
     const credential = GoogleAuthProvider.credentialFromResult(result);
     const token = credential?.accessToken;
+    console.log("Token obtained:", token ? "Yes" : "No");
+    
     const user = result.user;
+    console.log("User info received:", user ? "Yes" : "No", user?.email);
     
     // Register or log in the user with our backend
     if (user) {
+      console.log("Sending user data to backend");
       await apiRequest("POST", "/api/auth/firebase-login", {
         firebaseUid: user.uid,
         email: user.email,
@@ -32,12 +50,33 @@ export const signInWithGoogle = async () => {
       });
       
       // Invalidate auth queries to refresh user data
+      console.log("Invalidating auth queries");
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
     }
     
     return user;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error signing in with Google:", error);
+    console.error("Error code:", error.code);
+    console.error("Error message:", error.message);
+    
+    // Log more specific Firebase Auth errors
+    if (error.code) {
+      switch (error.code) {
+        case 'auth/popup-blocked':
+          console.error("Popup was blocked by the browser");
+          break;
+        case 'auth/popup-closed-by-user':
+          console.error("Popup was closed by the user");
+          break;
+        case 'auth/unauthorized-domain':
+          console.error("The domain is not authorized in Firebase");
+          break;
+        default:
+          console.error("Other Firebase error");
+      }
+    }
+    
     throw error;
   }
 };

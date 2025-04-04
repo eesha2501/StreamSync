@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { signInWithGoogle, adminLogin } from '@/lib/auth';
+import { signInWithGoogle, signInWithGoogleRedirect, adminLogin, processRedirectResult } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { FcGoogle } from 'react-icons/fc';
@@ -24,15 +24,37 @@ const Login = () => {
     return null;
   }
   
+  // Check for redirect result on component mount
+  useEffect(() => {
+    const checkRedirectResult = async () => {
+      try {
+        const user = await processRedirectResult();
+        if (user) {
+          navigate('/');
+          toast({
+            title: 'Login successful',
+            description: 'You have been logged in with Google',
+          });
+        }
+      } catch (error) {
+        console.error('Error processing redirect:', error);
+        toast({
+          title: 'Login failed',
+          description: 'There was an error processing your login',
+          variant: 'destructive',
+        });
+      }
+    };
+    
+    checkRedirectResult();
+  }, [navigate, toast]);
+
   const handleGoogleLogin = async () => {
     try {
       setIsLoading(true);
-      await signInWithGoogle();
-      navigate('/');
-      toast({
-        title: 'Login successful',
-        description: 'You have been logged in with Google',
-      });
+      // Try the redirect method instead of popup
+      signInWithGoogleRedirect();
+      // No need for navigation here as it will redirect to Google
     } catch (error) {
       console.error('Google login error:', error);
       toast({
@@ -40,7 +62,6 @@ const Login = () => {
         description: 'There was an error logging in with Google',
         variant: 'destructive',
       });
-    } finally {
       setIsLoading(false);
     }
   };
