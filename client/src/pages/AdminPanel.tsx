@@ -102,8 +102,8 @@ const videoFormSchema = z.object({
   releaseYear: z.string().regex(/^\d{4}$/, {
     message: "Release year must be a 4-digit year",
   }),
-  startTime: z.date().optional(),
-  endTime: z.date().optional(),
+  startTime: z.coerce.date().optional(),
+  endTime: z.coerce.date().optional(),
 });
 
 type StreamFormValues = z.infer<typeof streamFormSchema>;

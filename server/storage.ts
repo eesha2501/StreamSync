@@ -92,14 +92,18 @@ export class MemStorage implements IStorage {
       checkPeriod: 86400000 // prune expired entries every 24h
     });
 
-    // Create a default admin user
-    this.createUser({
+    // Create a default admin user directly (not using async method)
+    const adminUser: User = {
+      id: this.userIdCounter++,
       username: "admin",
       email: "admin@streamsync.com",
       password: "adminPassword", // In production, this would be hashed
       role: UserRole.ADMIN,
-      displayName: "Admin User"
-    });
+      displayName: "Admin User",
+      createdAt: new Date()
+    };
+    this.users.set(adminUser.id, adminUser);
+    console.log("Admin user created in MemStorage");
   }
 
   // User operations
