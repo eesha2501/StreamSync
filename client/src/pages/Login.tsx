@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -17,12 +17,23 @@ const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('admin');
+  
+  // Check URL parameters for tab selection
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab === 'admin' || tab === 'user') {
+      setActiveTab(tab);
+    }
+  }, []);
   
   // If user is already logged in, redirect to home
-  if (user) {
-    navigate('/');
-    return null;
-  }
+  useEffect(() => {
+    if (user) {
+      navigate('/');
+    }
+  }, [user, navigate]);
   
   // Check for redirect result on component mount
   useEffect(() => {
@@ -43,6 +54,8 @@ const Login = () => {
           description: 'There was an error processing your login',
           variant: 'destructive',
         });
+        // If there was an error, redirect to admin login tab
+        setActiveTab('admin');
       }
     };
     
@@ -63,6 +76,8 @@ const Login = () => {
         variant: 'destructive',
       });
       setIsLoading(false);
+      // If there was an error, switch to admin login tab
+      setActiveTab('admin');
     }
   };
   
@@ -98,6 +113,11 @@ const Login = () => {
     }
   };
 
+  // If user is already authenticated, don't render the login form
+  if (user) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-[#141414] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -106,10 +126,18 @@ const Login = () => {
           <p className="text-gray-400">Synchronized streaming experience</p>
         </div>
         
-        <Tabs defaultValue="user" className="w-full">
+        <div className="mb-4 p-4 bg-yellow-900/30 border border-yellow-800 rounded-md text-left">
+          <p className="font-medium text-yellow-500 mb-1">Firebase Authentication Issue Detected</p>
+          <p className="text-gray-300 mb-2">We're having trouble with Firebase authentication. Please use the Admin login method below.</p>
+          <p className="text-gray-400 text-sm">
+            (For Firebase users: Make sure to add <span className="font-mono text-xs bg-black/50 px-1 py-0.5 rounded">*.replit.dev</span> and your specific domain to Firebase authorized domains)
+          </p>
+        </div>
+        
+        <Tabs defaultValue="admin" value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-4">
-            <TabsTrigger value="user">User Login</TabsTrigger>
             <TabsTrigger value="admin">Admin Login</TabsTrigger>
+            <TabsTrigger value="user">Google Login</TabsTrigger>
           </TabsList>
           
           <TabsContent value="user">

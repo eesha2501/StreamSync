@@ -10,11 +10,21 @@ import { auth } from "./firebase";
 import { apiRequest } from "./queryClient";
 import { queryClient } from "./queryClient";
 
+// Flag to control whether to attempt Firebase authentication
+const ENABLE_FIREBASE_AUTH = true; // Set to false to skip Firebase auth entirely
+
 // Google provider
 const googleProvider = new GoogleAuthProvider();
 
 // Sign in with Google using popup
 export const signInWithGoogle = async () => {
+  // If Firebase auth is disabled, redirect to admin login
+  if (!ENABLE_FIREBASE_AUTH) {
+    console.log("Firebase auth is disabled, redirecting to admin login");
+    window.location.href = '/auth?tab=admin';
+    return null;
+  }
+  
   try {
     console.log("Starting Google sign-in process");
     
@@ -42,16 +52,23 @@ export const signInWithGoogle = async () => {
     // Register or log in the user with our backend
     if (user) {
       console.log("Sending user data to backend");
-      await apiRequest("POST", "/api/auth/firebase-login", {
-        firebaseUid: user.uid,
-        email: user.email,
-        displayName: user.displayName,
-        photoURL: user.photoURL
-      });
-      
-      // Invalidate auth queries to refresh user data
-      console.log("Invalidating auth queries");
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      try {
+        await apiRequest("POST", "/api/auth/firebase-login", {
+          firebaseUid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL
+        });
+        
+        // Invalidate auth queries to refresh user data
+        console.log("Invalidating auth queries");
+        queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      } catch (backendError) {
+        console.error("Backend authentication failed:", backendError);
+        alert("Server authentication failed. Please try the admin login instead.");
+        window.location.href = '/auth?tab=admin';
+        return null;
+      }
     }
     
     return user;
@@ -74,15 +91,20 @@ export const signInWithGoogle = async () => {
         case 'auth/unauthorized-domain':
           console.error("The domain is not authorized in Firebase");
           alert("This domain is not authorized in your Firebase project. Please add this domain to the authorized domains list in the Firebase console: Authentication → Settings → Authorized domains");
-          // Fallback to regular login
-          if (window.confirm("Would you like to sign in with username/password instead?")) {
-            // Redirect to admin login page
-            window.location.href = '/auth';
-          }
-          break;
+          // Fallback to admin login
+          console.log("Redirecting to admin login due to unauthorized domain");
+          window.location.href = '/auth?tab=admin';
+          return null;
+        case 'auth/network-request-failed':
+          console.error("Network request failed");
+          alert("Network request failed. Please check your internet connection or try the admin login instead.");
+          window.location.href = '/auth?tab=admin';
+          return null;
         default:
           console.error("Other Firebase error");
-          alert(`Authentication error: ${error.message}`);
+          alert(`Authentication error: ${error.message}. Please try the admin login instead.`);
+          window.location.href = '/auth?tab=admin';
+          return null;
       }
     }
     
