@@ -130,12 +130,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     // Set user session
-    if (req.session) {
+    if (req.session && user) {
       req.session.userId = user.id;
     }
     
-    // Don't return password in response
-    const { password, ...userWithoutPassword } = user;
+    // Don't return password in response if it exists
+    // Create a safe user object
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    
+    // Create a safe user object without password
+    const userWithoutPassword = { 
+      ...user,
+      password: undefined 
+    };
     res.status(200).json(userWithoutPassword);
   });
   
@@ -162,7 +171,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     // Don't return password in response
-    const { password: _, ...userWithoutPassword } = user;
+    const userWithoutPassword = { 
+      ...user,
+      password: undefined 
+    };
     res.status(200).json(userWithoutPassword);
   });
   
@@ -190,7 +202,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     // Don't return password in response
-    const { password, ...userWithoutPassword } = user;
+    const userWithoutPassword = { 
+      ...user,
+      password: undefined 
+    };
     res.status(200).json(userWithoutPassword);
   });
   
@@ -229,9 +244,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
+      if (!req.session?.userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+      
       const video = await storage.createVideo({
         ...validation.data,
-        userId: req.session!.userId
+        userId: req.session.userId
       });
       res.status(201).json(video);
     } catch (error) {
@@ -256,8 +275,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     // Check if user has permission
-    if (video.userId !== req.session!.userId) {
-      const user = await storage.getUser(req.session!.userId);
+    if (req.session?.userId && video.userId !== req.session.userId) {
+      const user = await storage.getUser(req.session.userId);
       if (!user || user.role !== UserRole.ADMIN) {
         return res.status(403).json({ message: "You don't have permission to edit this video" });
       }
@@ -283,8 +302,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     // Check if user has permission
-    if (video.userId !== req.session!.userId) {
-      const user = await storage.getUser(req.session!.userId);
+    if (req.session?.userId && video.userId !== req.session.userId) {
+      const user = await storage.getUser(req.session.userId);
       if (!user || user.role !== UserRole.ADMIN) {
         return res.status(403).json({ message: "You don't have permission to delete this video" });
       }
@@ -334,9 +353,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
+      if (!req.session?.userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+      
       const stream = await storage.createStream({
         ...validation.data,
-        userId: req.session!.userId
+        userId: req.session.userId
       });
       res.status(201).json(stream);
     } catch (error) {
@@ -361,8 +384,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     // Check if user has permission
-    if (stream.userId !== req.session!.userId) {
-      const user = await storage.getUser(req.session!.userId);
+    if (req.session?.userId && stream.userId !== req.session.userId) {
+      const user = await storage.getUser(req.session.userId);
       if (!user || user.role !== UserRole.ADMIN) {
         return res.status(403).json({ message: "You don't have permission to edit this stream" });
       }
@@ -388,8 +411,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     // Check if user has permission
-    if (stream.userId !== req.session!.userId) {
-      const user = await storage.getUser(req.session!.userId);
+    if (req.session?.userId && stream.userId !== req.session.userId) {
+      const user = await storage.getUser(req.session.userId);
       if (!user || user.role !== UserRole.ADMIN) {
         return res.status(403).json({ message: "You don't have permission to delete this stream" });
       }
@@ -415,9 +438,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
+      if (!req.session?.userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+      
       const session = await storage.createViewerSession({
         ...validation.data,
-        userId: req.session!.userId,
+        userId: req.session.userId,
         isActive: true
       });
       res.status(201).json(session);
@@ -443,7 +470,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     // Check if this is the user's session
-    if (session.userId !== req.session!.userId) {
+    if (!req.session?.userId || session.userId !== req.session.userId) {
       return res.status(403).json({ message: "You don't have permission to update this session" });
     }
     
@@ -470,7 +497,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     // Check if this is the user's session
-    if (session.userId !== req.session!.userId) {
+    if (!req.session?.userId || session.userId !== req.session.userId) {
       return res.status(403).json({ message: "You don't have permission to end this session" });
     }
     
@@ -497,7 +524,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Notification Routes
   app.get('/api/notifications', requireAuth, async (req, res) => {
     try {
-      const notifications = await storage.getNotifications(req.session!.userId);
+      if (!req.session?.userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+      const notifications = await storage.getNotifications(req.session.userId);
       res.status(200).json(notifications);
     } catch (error) {
       res.status(500).json({ message: "Failed to get notifications" });
@@ -506,7 +536,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get('/api/notifications/unread', requireAuth, async (req, res) => {
     try {
-      const unreadNotifications = await storage.getUnreadNotifications(req.session!.userId);
+      if (!req.session?.userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+      const unreadNotifications = await storage.getUnreadNotifications(req.session.userId);
       res.status(200).json(unreadNotifications);
     } catch (error) {
       res.status(500).json({ message: "Failed to get unread notifications" });
@@ -533,7 +566,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ message: "Invalid ID format" });
     }
     
-    const notification = await storage.getNotifications(req.session!.userId)
+    if (!req.session?.userId) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+    
+    const notification = await storage.getNotifications(req.session.userId)
       .then(notifications => notifications.find(n => n.id === id));
     
     if (!notification) {
@@ -554,7 +591,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ message: "Invalid ID format" });
     }
     
-    const notification = await storage.getNotifications(req.session!.userId)
+    if (!req.session?.userId) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+    
+    const notification = await storage.getNotifications(req.session.userId)
       .then(notifications => notifications.find(n => n.id === id));
     
     if (!notification) {

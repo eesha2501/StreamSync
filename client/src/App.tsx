@@ -21,11 +21,14 @@ const PlaceholderPage = ({ title }: { title: string }) => (
   </div>
 );
 
+// Import real page
+import Profile from "@/pages/Profile";
+
+// Define placeholder pages
 const TVShows = () => <PlaceholderPage title="TV Shows" />;
 const Movies = () => <PlaceholderPage title="Movies" />;
 const NewAndPopular = () => <PlaceholderPage title="New & Popular" />;
 const MyList = () => <PlaceholderPage title="My List" />;
-const Profile = () => <PlaceholderPage title="User Profile" />;
 const HelpCenter = () => <PlaceholderPage title="Help Center" />;
 
 function Router() {
