@@ -5,28 +5,26 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { signInWithGoogle, signInWithGoogleRedirect, adminLogin, processRedirectResult } from '@/lib/auth';
+import { adminLogin } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { FcGoogle } from 'react-icons/fc';
+import { apiRequest } from '@/lib/queryClient';
+import { UserRole } from '@shared/schema';
+import { queryClient } from '@/lib/queryClient';
 
 const Login = () => {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
+  
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [signupUsername, setSignupUsername] = useState('');
+  const [signupPassword, setSignupPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('admin');
-  
-  // Check URL parameters for tab selection
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const tab = params.get('tab');
-    if (tab === 'admin' || tab === 'user') {
-      setActiveTab(tab);
-    }
-  }, []);
+  const [activeTab, setActiveTab] = useState('login');
   
   // If user is already logged in, redirect to home
   useEffect(() => {
@@ -35,53 +33,7 @@ const Login = () => {
     }
   }, [user, navigate]);
   
-  // Check for redirect result on component mount
-  useEffect(() => {
-    const checkRedirectResult = async () => {
-      try {
-        const user = await processRedirectResult();
-        if (user) {
-          navigate('/');
-          toast({
-            title: 'Login successful',
-            description: 'You have been logged in with Google',
-          });
-        }
-      } catch (error) {
-        console.error('Error processing redirect:', error);
-        toast({
-          title: 'Login failed',
-          description: 'There was an error processing your login',
-          variant: 'destructive',
-        });
-        // If there was an error, redirect to admin login tab
-        setActiveTab('admin');
-      }
-    };
-    
-    checkRedirectResult();
-  }, [navigate, toast]);
-
-  const handleGoogleLogin = async () => {
-    try {
-      setIsLoading(true);
-      // Try the redirect method instead of popup
-      signInWithGoogleRedirect();
-      // No need for navigation here as it will redirect to Google
-    } catch (error) {
-      console.error('Google login error:', error);
-      toast({
-        title: 'Login failed',
-        description: 'There was an error logging in with Google',
-        variant: 'destructive',
-      });
-      setIsLoading(false);
-      // If there was an error, switch to admin login tab
-      setActiveTab('admin');
-    }
-  };
-  
-  const handleAdminLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!username || !password) {
@@ -99,13 +51,61 @@ const Login = () => {
       navigate('/');
       toast({
         title: 'Login successful',
-        description: 'You have been logged in as an admin',
+        description: 'You have been logged in successfully',
       });
     } catch (error) {
-      console.error('Admin login error:', error);
+      console.error('Login error:', error);
       toast({
         title: 'Login failed',
         description: 'Invalid credentials. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!signupUsername || !signupPassword || !email) {
+      toast({
+        title: 'Signup failed',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    try {
+      setIsLoading(true);
+      
+      const response = await apiRequest('POST', '/api/auth/register', {
+        username: signupUsername,
+        password: signupPassword,
+        email,
+        displayName: displayName || signupUsername,
+        role: UserRole.USER
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to create account');
+      }
+      
+      // Invalidate auth queries
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+      
+      navigate('/');
+      toast({
+        title: 'Signup successful',
+        description: 'Your account has been created successfully',
+      });
+    } catch (error: any) {
+      console.error('Signup error:', error);
+      toast({
+        title: 'Signup failed',
+        description: error.message || 'Failed to create account. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -126,81 +126,28 @@ const Login = () => {
           <p className="text-gray-400">Synchronized streaming experience</p>
         </div>
         
-        <div className="mb-4 p-4 bg-yellow-900/30 border border-yellow-800 rounded-md text-left">
-          <p className="font-medium text-yellow-500 mb-1">Firebase Authentication Issue Detected</p>
-          <p className="text-gray-300 mb-2">We're having trouble with Firebase authentication. Please use the Admin login method below.</p>
-          <p className="text-gray-400 text-sm">
-            (For Firebase users: Make sure to add <span className="font-mono text-xs bg-black/50 px-1 py-0.5 rounded">*.replit.dev</span> and your specific domain to Firebase authorized domains)
-          </p>
-        </div>
-        
-        <Tabs defaultValue="admin" value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs defaultValue="login" value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-4">
-            <TabsTrigger value="admin">Admin Login</TabsTrigger>
-            <TabsTrigger value="user">Google Login</TabsTrigger>
+            <TabsTrigger value="login">Sign In</TabsTrigger>
+            <TabsTrigger value="signup">Sign Up</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="user">
+          <TabsContent value="login">
             <Card className="border-0 bg-[#221F1F]">
               <CardHeader>
-                <CardTitle>User Login</CardTitle>
+                <CardTitle>Sign In</CardTitle>
                 <CardDescription>
                   Sign in to access synchronized streaming content
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Button 
-                  variant="outline" 
-                  className="w-full font-semibold border-gray-700 hover:bg-gray-800 space-x-2"
-                  onClick={handleGoogleLogin}
-                  disabled={isLoading}
-                >
-                  <FcGoogle className="h-5 w-5" />
-                  <span>Sign in with Google</span>
-                </Button>
-                
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-gray-700"></span>
-                  </div>
-                  <div className="relative flex justify-center text-xs">
-                    <span className="px-2 bg-[#221F1F] text-gray-400">Or continue with</span>
-                  </div>
-                </div>
-                
-                <div className="text-center text-sm text-gray-400">
-                  <p>This is a demo application.</p>
-                  <p>Click "Sign in with Google" to continue as a user.</p>
-                  <div className="mt-4 p-3 bg-yellow-900/30 border border-yellow-800 rounded-md text-left">
-                    <p className="font-medium text-yellow-500 mb-1">Firebase Authorization Note:</p>
-                    <p>If you see an "unauthorized domain" error, add your Replit domain to Firebase:</p>
-                    <ol className="list-decimal ml-5 space-y-1 mt-1">
-                      <li>Go to Firebase console</li>
-                      <li>Select Authentication → Settings</li>
-                      <li>Add your domain to "Authorized domains"</li>
-                    </ol>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="admin">
-            <Card className="border-0 bg-[#221F1F]">
-              <CardHeader>
-                <CardTitle>Admin Login</CardTitle>
-                <CardDescription>
-                  Sign in with admin credentials to manage content
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <form onSubmit={handleAdminLogin}>
+                <form onSubmit={handleLogin}>
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="username">Username</Label>
+                      <Label htmlFor="username">Username or Email</Label>
                       <Input 
                         id="username" 
-                        placeholder="admin"
+                        placeholder="Enter your username or email"
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         className="bg-[#141414] border-gray-700"
@@ -229,9 +176,90 @@ const Login = () => {
                 </form>
                 
                 <div className="text-center text-sm text-gray-400 mt-4">
-                  <p>Demo credentials:</p>
+                  <p>Demo admin credentials:</p>
                   <p>Username: admin</p>
                   <p>Password: adminPassword</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="signup">
+            <Card className="border-0 bg-[#221F1F]">
+              <CardHeader>
+                <CardTitle>Create Account</CardTitle>
+                <CardDescription>
+                  Sign up to join the StreamSync community
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <form onSubmit={handleSignup}>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="signupUsername">Username</Label>
+                      <Input 
+                        id="signupUsername" 
+                        placeholder="Choose a username"
+                        value={signupUsername}
+                        onChange={(e) => setSignupUsername(e.target.value)}
+                        className="bg-[#141414] border-gray-700"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input 
+                        id="email"
+                        type="email"
+                        placeholder="Enter your email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="bg-[#141414] border-gray-700"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="displayName">Display Name (Optional)</Label>
+                      <Input 
+                        id="displayName"
+                        placeholder="How you'll appear to others"
+                        value={displayName}
+                        onChange={(e) => setDisplayName(e.target.value)}
+                        className="bg-[#141414] border-gray-700"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="signupPassword">Password</Label>
+                      <Input 
+                        id="signupPassword" 
+                        type="password" 
+                        placeholder="Create a password"
+                        value={signupPassword}
+                        onChange={(e) => setSignupPassword(e.target.value)}
+                        className="bg-[#141414] border-gray-700"
+                      />
+                    </div>
+                    
+                    <Button 
+                      type="submit" 
+                      className="w-full bg-[#E50914] hover:bg-[#f40612]"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? 'Creating Account...' : 'Create Account'}
+                    </Button>
+                  </div>
+                </form>
+                
+                <div className="text-center text-sm text-gray-400 mt-4">
+                  <p>Already have an account?</p>
+                  <Button 
+                    variant="link" 
+                    className="text-[#E50914] p-0 h-auto"
+                    onClick={() => setActiveTab('login')}
+                  >
+                    Sign in instead
+                  </Button>
                 </div>
               </CardContent>
             </Card>

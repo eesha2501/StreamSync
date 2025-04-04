@@ -8,14 +8,17 @@ import Login from "@/pages/Login";
 import AdminPanel from "@/pages/AdminPanel";
 import VideoPlayer from "@/pages/VideoPlayer";
 import { AuthProvider } from "@/context/AuthContext";
+import { ProtectedRoute, AdminRoute } from "@/lib/protected-route";
+import { UserRole } from "@shared/schema";
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Home} />
-      <Route path="/login" component={Login} />
-      <Route path="/admin" component={AdminPanel} />
-      <Route path="/watch/:type/:id" component={VideoPlayer} />
+      <ProtectedRoute path="/" component={Home} />
+      <Route path="/auth" component={Login} />
+      <Route path="/login" component={Login} /> {/* For backward compatibility */}
+      <AdminRoute path="/admin" component={AdminPanel} />
+      <ProtectedRoute path="/watch/:type/:id" component={VideoPlayer} />
       <Route component={NotFound} />
     </Switch>
   );
