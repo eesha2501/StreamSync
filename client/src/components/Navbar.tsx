@@ -40,7 +40,7 @@ const Navbar = () => {
   const handleLogout = async () => {
     try {
       await signOutUser();
-      navigate('/login');
+      navigate('/auth');
       toast({
         title: 'Logged out',
         description: 'You have been successfully logged out.',
@@ -170,7 +170,7 @@ const Navbar = () => {
           ) : (
             <Button 
               variant="default" 
-              onClick={() => navigate('/login')}
+              onClick={() => navigate('/auth')}
               className="bg-[#E50914] hover:bg-[#f40612] text-white"
             >
               Sign In
