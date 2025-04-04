@@ -102,6 +102,8 @@ const videoFormSchema = z.object({
   releaseYear: z.string().regex(/^\d{4}$/, {
     message: "Release year must be a 4-digit year",
   }),
+  startTime: z.date().optional(),
+  endTime: z.date().optional(),
 });
 
 type StreamFormValues = z.infer<typeof streamFormSchema>;
@@ -162,6 +164,8 @@ const AdminPanel = () => {
       category: '',
       duration: 0,
       releaseYear: new Date().getFullYear().toString(),
+      startTime: new Date(),
+      endTime: new Date(new Date().setDate(new Date().getDate() + 1)),
     },
   });
 
@@ -311,10 +315,6 @@ const AdminPanel = () => {
   };
 
   const handleCreateVideo = (data: VideoFormValues) => {
-    const now = new Date();
-    const tomorrow = new Date(now);
-    tomorrow.setDate(now.getDate() + 1);
-    
     createVideoMutation.mutate({
       title: data.title,
       description: data.description,
@@ -323,8 +323,8 @@ const AdminPanel = () => {
       category: data.category,
       duration: data.duration,
       isLive: true, // Set videos as live by default
-      startTime: now, // Available immediately
-      endTime: tomorrow, // Available for 24 hours by default
+      startTime: data.startTime,
+      endTime: data.endTime,
     });
   };
 
@@ -756,6 +756,56 @@ const AdminPanel = () => {
                                   {...field} 
                                 />
                               </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={videoForm.control}
+                          name="startTime"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Available From</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="datetime-local" 
+                                  className="bg-[#141414] border-gray-700" 
+                                  value={field.value ? new Date(field.value).toISOString().slice(0, 16) : ''}
+                                  onChange={(e) => {
+                                    const date = e.target.value ? new Date(e.target.value) : null;
+                                    field.onChange(date);
+                                  }}
+                                />
+                              </FormControl>
+                              <FormDescription className="text-gray-400">
+                                When the video becomes available
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={videoForm.control}
+                          name="endTime"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Available Until</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="datetime-local" 
+                                  className="bg-[#141414] border-gray-700"
+                                  value={field.value ? new Date(field.value).toISOString().slice(0, 16) : ''}
+                                  onChange={(e) => {
+                                    const date = e.target.value ? new Date(e.target.value) : null;
+                                    field.onChange(date);
+                                  }}
+                                />
+                              </FormControl>
+                              <FormDescription className="text-gray-400">
+                                When the video becomes unavailable
+                              </FormDescription>
                               <FormMessage />
                             </FormItem>
                           )}
