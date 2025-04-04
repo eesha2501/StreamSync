@@ -1,6 +1,22 @@
 import type { Express, Request, Response } from "express";
+import express, { NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import multer from 'multer';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
+
+// ES modules don't have __dirname, so we recreate it
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+import { WebSocketServer, WebSocket } from 'ws';
+
+// Extend WebSocket to add custom properties
+interface SyncWebSocket extends WebSocket {
+  videoId?: number;
+  streamId?: number;
+}
 import { 
   insertUserSchema, 
   insertVideoSchema, 
@@ -612,6 +628,278 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       res.status(500).json({ message: "Failed to delete notification" });
     }
+  });
+
+  // Create uploads directory if it doesn't exist
+  const uploadsDir = path.join(__dirname, '../uploads');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+
+  // Configure multer storage
+  const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+      cb(null, uploadsDir);
+    },
+    filename: function (req, file, cb) {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      const ext = path.extname(file.originalname);
+      cb(null, uniqueSuffix + ext);
+    }
+  });
+
+  // Configure multer upload
+  const upload = multer({ 
+    storage: storage,
+    limits: {
+      fileSize: 100 * 1024 * 1024, // 100MB limit
+    },
+    fileFilter: function (req, file, cb) {
+      // Accept videos, images, and other common files
+      const filetypes = /jpeg|jpg|png|gif|mp4|webm|mov|avi|wmv/;
+      const mimetype = filetypes.test(file.mimetype);
+      const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+      
+      if (mimetype && extname) {
+        return cb(null, true);
+      }
+      
+      cb(new Error('Only media files are allowed'));
+    }
+  });
+
+  // Serve static files from uploads directory
+  app.use('/uploads', express.static(uploadsDir));
+
+  // File upload routes
+  app.post('/api/upload/video', requireAuth, requireRole([UserRole.ADMIN, UserRole.CHANNEL_ADMIN]), upload.single('video'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: 'No file uploaded' });
+      }
+
+      // Return the file path
+      const filePath = `/uploads/${req.file.filename}`;
+      res.status(200).json({ 
+        message: 'File uploaded successfully',
+        filePath: filePath,
+        fileName: req.file.originalname,
+        fileSize: req.file.size
+      });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to upload file' });
+    }
+  });
+
+  // Profile image upload
+  app.post('/api/upload/profile-image', requireAuth, upload.single('image'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: 'No file uploaded' });
+      }
+      
+      if (!req.session?.userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+
+      // Get the file path
+      const filePath = `/uploads/${req.file.filename}`;
+      
+      // Update user profile
+      const updatedUser = await storage.updateUser(req.session.userId, {
+        photoURL: filePath
+      });
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // Return updated user without password
+      const userWithoutPassword = {
+        ...updatedUser,
+        password: undefined
+      };
+      
+      res.status(200).json({
+        message: 'Profile image updated successfully',
+        user: userWithoutPassword
+      });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to update profile image' });
+    }
+  });
+
+  // Thumbnail upload
+  app.post('/api/upload/thumbnail', requireAuth, requireRole([UserRole.ADMIN, UserRole.CHANNEL_ADMIN]), upload.single('thumbnail'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: 'No file uploaded' });
+      }
+
+      // Return the file path
+      const filePath = `/uploads/${req.file.filename}`;
+      res.status(200).json({ 
+        message: 'Thumbnail uploaded successfully',
+        filePath: filePath,
+        fileName: req.file.originalname,
+        fileSize: req.file.size
+      });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to upload thumbnail' });
+    }
+  });
+
+  // Get watch history
+  app.get('/api/watch-history', requireAuth, async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+    
+    try {
+      // Get all completed viewer sessions for the user
+      const sessions = await storage.getActiveViewerSessions();
+      const userSessions = sessions.filter(session => session.userId === req.session?.userId);
+      
+      // Get video and stream details
+      const history = await Promise.all(userSessions.map(async (session) => {
+        let mediaContent;
+        
+        if (session.videoId) {
+          mediaContent = await storage.getVideo(session.videoId);
+        } else if (session.streamId) {
+          mediaContent = await storage.getStream(session.streamId);
+        }
+        
+        if (!mediaContent) return null;
+        
+        return {
+          sessionId: session.id,
+          sessionStarted: session.startedAt,
+          sessionEnded: session.endedAt,
+          progress: session.currentTimestamp,
+          isActive: session.isActive,
+          media: mediaContent
+        };
+      }));
+      
+      // Filter out null entries
+      const validHistory = history.filter(item => item !== null);
+      
+      res.status(200).json(validHistory);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to get watch history' });
+    }
+  });
+
+  // Add user management endpoint for Admin
+  app.get('/api/users', requireAuth, requireRole([UserRole.ADMIN]), async (req, res) => {
+    try {
+      // This endpoint requires implementation in storage.ts
+      // For now, we'll return all users without password
+      const users = await storage.getAllUsers();
+      const safeUsers = users.map(user => ({
+        ...user,
+        password: undefined
+      }));
+      
+      res.status(200).json(safeUsers);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to get users' });
+    }
+  });
+
+  // Search API (for search functionality)
+  app.get('/api/search', async (req, res) => {
+    const query = req.query.q as string;
+    if (!query) {
+      return res.status(400).json({ message: "Search query is required" });
+    }
+    
+    try {
+      // Search in videos
+      const videos = await storage.getVideos();
+      const filteredVideos = videos.filter(video => 
+        video.title.toLowerCase().includes(query.toLowerCase()) || 
+        (video.description && video.description.toLowerCase().includes(query.toLowerCase())) ||
+        (video.category && video.category.toLowerCase().includes(query.toLowerCase()))
+      );
+      
+      // Search in streams
+      const streams = await storage.getLiveStreams();
+      const upcomingStreams = await storage.getUpcomingStreams();
+      const allStreams = [...streams, ...upcomingStreams];
+      
+      const filteredStreams = allStreams.filter(stream => 
+        stream.title.toLowerCase().includes(query.toLowerCase()) || 
+        (stream.description && stream.description.toLowerCase().includes(query.toLowerCase()))
+      );
+      
+      res.status(200).json({
+        videos: filteredVideos,
+        streams: filteredStreams
+      });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to search content' });
+    }
+  });
+
+  // Set up WebSocket server for synchronized video playback
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  
+  wss.on('connection', (ws: SyncWebSocket) => {
+    console.log('Client connected to WebSocket');
+    
+    // Send initial heartbeat
+    ws.send(JSON.stringify({ type: 'CONNECTED', timestamp: Date.now() }));
+    
+    // Handle messages from clients
+    ws.on('message', async (message) => {
+      try {
+        const data = JSON.parse(message.toString());
+        console.log('Received message:', data);
+        
+        // Handle different message types
+        if (data.type === 'SYNC') {
+          // Broadcast sync message to all clients watching the same content
+          wss.clients.forEach((client: SyncWebSocket) => {
+            if (client !== ws && client.readyState === WebSocket.OPEN) {
+              // Only send to clients watching the same content
+              if ((data.videoId && client.videoId === data.videoId) || 
+                  (data.streamId && client.streamId === data.streamId)) {
+                client.send(JSON.stringify({
+                  type: 'SYNC',
+                  currentTime: data.currentTime,
+                  playing: data.playing,
+                  userId: data.userId,
+                  videoId: data.videoId,
+                  streamId: data.streamId,
+                  timestamp: Date.now()
+                }));
+              }
+            }
+          });
+          
+          // Save the content ID with the websocket for later filtering
+          if (data.videoId) ws.videoId = data.videoId;
+          if (data.streamId) ws.streamId = data.streamId;
+          
+          // Update the viewer session in the database
+          if (data.sessionId) {
+            await storage.updateViewerSession(data.sessionId, {
+              currentTimestamp: data.currentTime,
+              isActive: true
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error processing WebSocket message:', error);
+      }
+    });
+    
+    // Handle WebSocket close
+    ws.on('close', () => {
+      console.log('Client disconnected from WebSocket');
+    });
   });
 
   return httpServer;

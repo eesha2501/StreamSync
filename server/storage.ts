@@ -25,6 +25,7 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined>;
+  getAllUsers(): Promise<User[]>;
   
   // Video operations
   getVideo(id: number): Promise<Video | undefined>;
@@ -322,6 +323,10 @@ export class MemStorage implements IStorage {
   async deleteNotification(id: number): Promise<boolean> {
     return this.notifications.delete(id);
   }
+
+  async getAllUsers(): Promise<User[]> {
+    return Array.from(this.users.values());
+  }
 }
 
 export class DatabaseStorage implements IStorage {
@@ -573,6 +578,10 @@ export class DatabaseStorage implements IStorage {
   async deleteNotification(id: number): Promise<boolean> {
     const result = await db.delete(notifications).where(eq(notifications.id, id));
     return !!result;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users).orderBy(users.id);
   }
 }
 
