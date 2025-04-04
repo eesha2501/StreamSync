@@ -7,7 +7,8 @@ import {
   syncViewerSession, 
   endViewerSession,
   setupSyncSocket,
-  type VideoSession 
+  type VideoSession,
+  type SyncSocket
 } from '@/lib/videoPlayer';
 import { useToast } from '@/hooks/use-toast';
 
@@ -43,7 +44,7 @@ export function VideoPlayer({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const playerRef = useRef<any>(null);
   const sessionRef = useRef<VideoSession | null>(null);
-  const socketRef = useRef<WebSocket | null>(null);
+  const socketRef = useRef<any>(null); // Use any type to avoid TypeScript errors
   const lastSyncTimeRef = useRef<number>(0);
   const syncIntervalRef = useRef<number | null>(null);
   const isSeekingRef = useRef<boolean>(false);
@@ -97,7 +98,9 @@ export function VideoPlayer({
           (error) => {
             console.error('WebSocket error:', error);
             if (onError) onError(error);
-          }
+          },
+          videoId,
+          streamId
         );
         
         // Set up sync interval

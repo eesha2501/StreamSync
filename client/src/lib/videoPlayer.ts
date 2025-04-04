@@ -63,60 +63,76 @@ export const endViewerSession = async (sessionId: number): Promise<VideoSession>
   }
 };
 
-// Setup synchronization using polling instead of WebSockets
+// Custom WebSocket interface with close method
+export interface SyncSocket {
+  socket: WebSocket;
+  close: () => void;
+}
+
+// Setup synchronization using WebSockets
 export const setupSyncSocket = (
   sessionId: number,
   onSync: (timestamp: number) => void,
-  onError: (error: Event) => void
-): { close: () => void } => {
-  console.log('Setting up polling sync (WebSocket functionality disabled)');
+  onError: (error: Event) => void,
+  videoId?: number,
+  streamId?: number
+): SyncSocket => {
+  // Determine WebSocket URL based on current protocol and host
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${protocol}//${window.location.host}/ws`;
   
-  // Use polling as a substitute for real-time WebSocket updates
+  console.log('Setting up WebSocket connection to:', wsUrl);
+  
+  // Create WebSocket connection
+  const socket = new WebSocket(wsUrl);
   let isActive = true;
-  const pollInterval = 5000; // Poll every 5 seconds
   
-  const pollForUpdates = async () => {
-    if (!isActive) return;
+  // Connection opened
+  socket.addEventListener('open', () => {
+    console.log('WebSocket connection established');
     
+    // Register this session with the sync server
+    socket.send(JSON.stringify({
+      type: 'REGISTER',
+      sessionId,
+      videoId,
+      streamId
+    }));
+  });
+  
+  // Listen for messages
+  socket.addEventListener('message', (event) => {
     try {
-      // Get active sessions for this video/stream
-      const response = await fetch('/api/viewer-sessions/active');
-      if (!response.ok) throw new Error('Failed to fetch active sessions');
+      const data = JSON.parse(event.data);
+      console.log('Received WebSocket message:', data);
       
-      const sessions = await response.json();
-      
-      // Find any sessions with more recent timestamps
-      const otherSessions = sessions.filter((s: any) => s.id !== sessionId);
-      if (otherSessions.length > 0) {
-        // Find the most advanced timestamp
-        const mostAdvanced = otherSessions.reduce((max: any, session: any) => {
-          return session.currentTimestamp > max.currentTimestamp ? session : max;
-        }, otherSessions[0]);
-        
-        // If it's ahead of our current time, update
-        onSync(mostAdvanced.currentTimestamp);
+      if (data.type === 'SYNC' && data.currentTime) {
+        onSync(data.currentTime);
       }
     } catch (error) {
-      console.error('Error polling for updates:', error);
-      // Call the error handler but convert to Event-like object
-      const errorEvent = new Event('error');
-      onError(errorEvent);
+      console.error('Error processing WebSocket message:', error);
     }
-    
-    // Continue polling
-    if (isActive) {
-      setTimeout(pollForUpdates, pollInterval);
-    }
-  };
+  });
   
-  // Start polling
-  setTimeout(pollForUpdates, pollInterval);
+  // Connection closed or error
+  socket.addEventListener('close', () => {
+    console.log('WebSocket connection closed');
+    isActive = false;
+  });
   
-  // Return an object with a close method to stop polling
+  socket.addEventListener('error', (error) => {
+    console.error('WebSocket error:', error);
+    onError(error);
+    isActive = false;
+  });
+  
+  // Return our custom SyncSocket object
   return {
+    socket: socket,
     close: () => {
       isActive = false;
-      console.log('Polling sync stopped');
+      socket.close();
+      console.log('WebSocket connection closed by client');
     }
   };
 };

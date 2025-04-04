@@ -363,7 +363,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isLive: !video.isLive,
         // If making it live again and there's no valid endTime, set it to a future date
         startTime: !video.isLive ? new Date() : video.startTime,
-        endTime: (!video.isLive && (!video.endTime || new Date(video.endTime as Date) < new Date())) ? 
+        endTime: (!video.isLive && (!video.endTime || (video.endTime && new Date(video.endTime) < new Date()))) ? 
           new Date(Date.now() + 24 * 60 * 60 * 1000) : // 24 hours from now
           video.endTime
       });
@@ -426,7 +426,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const filteredStreams = liveStreams.filter(stream => 
         stream.isLive === true && 
         stream.startTime <= now && 
-        (stream.endTime === null || now <= stream.endTime)
+        (!stream.endTime || now <= stream.endTime)
       );
       return res.status(200).json(filteredStreams);
     }
@@ -561,7 +561,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isLive: !stream.isLive,
         // If making it live again and there's no valid endTime, set it to a future date
         startTime: !stream.isLive ? new Date() : stream.startTime,
-        endTime: (!stream.isLive && (!stream.endTime || new Date(stream.endTime as Date) < new Date())) ? 
+        endTime: (!stream.isLive && (!stream.endTime || (stream.endTime && new Date(stream.endTime) < new Date()))) ? 
           new Date(Date.now() + 24 * 60 * 60 * 1000) : // 24 hours from now
           stream.endTime
       });
