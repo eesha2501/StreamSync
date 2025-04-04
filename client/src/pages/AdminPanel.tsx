@@ -122,9 +122,9 @@ const AdminPanel = () => {
   });
 
   const { data: videos = [], isLoading: isLoadingVideos } = useQuery<VideoType[]>({
-    queryKey: ['/api/videos'],
+    queryKey: ['/api/videos', 'admin'],
     queryFn: async () => {
-      const res = await apiRequest('GET', '/api/videos');
+      const res = await apiRequest('GET', '/api/videos?isAdmin=true');
       return res.json();
     },
   });
@@ -311,6 +311,10 @@ const AdminPanel = () => {
   };
 
   const handleCreateVideo = (data: VideoFormValues) => {
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(now.getDate() + 1);
+    
     createVideoMutation.mutate({
       title: data.title,
       description: data.description,
@@ -318,7 +322,9 @@ const AdminPanel = () => {
       videoUrl: data.videoUrl,
       category: data.category,
       duration: data.duration,
-      isLive: false,
+      isLive: true, // Set videos as live by default
+      startTime: now, // Available immediately
+      endTime: tomorrow, // Available for 24 hours by default
     });
   };
 

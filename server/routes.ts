@@ -245,7 +245,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       videos = videos.filter(video => {
         // For streams with scheduled times
         if (video.startTime && video.endTime) {
-          return video.startTime <= now && now <= video.endTime && video.isLive;
+          return video.startTime <= now && now <= (video.endTime as Date) && video.isLive;
         }
         // For videos that are always live (no specific schedule)
         return video.isLive === true;
@@ -274,7 +274,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if the video is currently live
       const isVideoLive = video.isLive && 
         (!video.startTime || (video.startTime && video.startTime <= now)) && 
-        (!video.endTime || (video.endTime && now <= video.endTime));
+        (!video.endTime || (video.endTime && now <= (video.endTime as unknown as Date)));
       
       if (!isVideoLive) {
         return res.status(404).json({ message: "Video not found or not currently available" });
@@ -362,7 +362,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedVideo = await dbStorage.updateVideo(id, { 
         isLive: !video.isLive,
         // If making it live again and there's no valid endTime, set it to a future date
-        endTime: (!video.isLive && (!video.endTime || new Date(video.endTime) < new Date())) ? 
+        startTime: !video.isLive ? new Date() : video.startTime,
+        endTime: (!video.isLive && (!video.endTime || new Date(video.endTime as Date) < new Date())) ? 
           new Date(Date.now() + 24 * 60 * 60 * 1000) : // 24 hours from now
           video.endTime
       });
@@ -559,7 +560,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedStream = await dbStorage.updateStream(id, { 
         isLive: !stream.isLive,
         // If making it live again and there's no valid endTime, set it to a future date
-        endTime: (!stream.isLive && (!stream.endTime || new Date(stream.endTime) < new Date())) ? 
+        startTime: !stream.isLive ? new Date() : stream.startTime,
+        endTime: (!stream.isLive && (!stream.endTime || new Date(stream.endTime as Date) < new Date())) ? 
           new Date(Date.now() + 24 * 60 * 60 * 1000) : // 24 hours from now
           stream.endTime
       });

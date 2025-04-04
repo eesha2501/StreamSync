@@ -49,7 +49,9 @@ export const videos = pgTable("videos", {
   duration: integer("duration"), // Duration in seconds
   isLive: boolean("is_live").default(false),
   createdAt: timestamp("created_at").defaultNow(),
-  scheduledAt: timestamp("scheduled_at"),
+  startTime: timestamp("start_time"), // When video becomes available
+  endTime: timestamp("end_time"), // When video becomes unavailable
+  scheduledAt: timestamp("scheduled_at"), // Backwards compatibility
   userId: integer("user_id").references(() => users.id), // Creator reference
 });
 
@@ -62,6 +64,8 @@ export const insertVideoSchema = createInsertSchema(videos)
     videoUrl: true,
     duration: true,
     isLive: true,
+    startTime: true,
+    endTime: true,
     scheduledAt: true,
     userId: true,
   })
@@ -70,6 +74,8 @@ export const insertVideoSchema = createInsertSchema(videos)
     category: true,
     thumbnailUrl: true,
     duration: true,
+    startTime: true,
+    endTime: true,
     scheduledAt: true,
   });
 

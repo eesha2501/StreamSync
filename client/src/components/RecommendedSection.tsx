@@ -6,14 +6,21 @@ import { useQuery } from '@tanstack/react-query';
 import { type Video } from '@shared/schema';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { useAuth } from '@/context/AuthContext';
+import { apiRequest } from '@/lib/queryClient';
 
 const RecommendedSection = () => {
   const [, navigate] = useLocation();
   const [scrollPosition, setScrollPosition] = useState(0);
+  const { user, isAdmin } = useAuth();
   
   // Fetch videos - in a real app, this would be filtered by recommendation algorithm
   const { data: videos, isLoading, error } = useQuery<Video[]>({
-    queryKey: ['/api/videos'],
+    queryKey: ['/api/videos', isAdmin ? 'admin' : 'user'],
+    queryFn: async () => {
+      const res = await apiRequest('GET', isAdmin ? '/api/videos?isAdmin=true' : '/api/videos');
+      return res.json();
+    },
   });
   
   // Mock data for demo purposes if no videos available
@@ -85,7 +92,7 @@ const RecommendedSection = () => {
   };
   
   const getVideoYear = (video: typeof displayVideos[0]): string => {
-    return new Date(video.createdAt).getFullYear().toString();
+    return video.createdAt ? new Date(video.createdAt).getFullYear().toString() : new Date().getFullYear().toString();
   };
   
   const handleViewAll = () => {
