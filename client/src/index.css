@@ -1,0 +1,101 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
+
+/* Netflix-inspired custom styles */
+:root {
+  --background: 0 0% 7.8%;
+  --foreground: 0 0% 98%;
+  
+  --card: 0 0% 12.2%;
+  --card-foreground: 0 0% 98%;
+  
+  --popover: 0 0% 12.2%;
+  --popover-foreground: 0 0% 98%;
+  
+  --primary: 0 87.2% 47.8%;
+  --primary-foreground: 0 0% 98%;
+  
+  --secondary: 0 0% 13.7%;
+  --secondary-foreground: 0 0% 98%;
+  
+  --muted: 0 0% 33.5%;
+  --muted-foreground: 0 0% 63.9%;
+  
+  --accent: 0 0% 14.9%;
+  --accent-foreground: 0 0% 98%;
+  
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+  
+  --border: 0 0% 33.9%;
+  --input: 0 0% 33.9%;
+  --ring: 0 87.2% 47.8%;
+  
+  --radius: 0.5rem;
+}
+
+/* Custom styles for the Netflix video player */
+.video-js {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+}
+
+.vjs-theme-netflix {
+  --vjs-theme-netflix--primary: #e50914;
+  --vjs-theme-netflix--secondary: #fff;
+}
+
+.vjs-theme-netflix .vjs-big-play-button {
+  background: rgba(0, 0, 0, 0.5);
+  border: none;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  line-height: 70px;
+  margin-top: -35px;
+  margin-left: -35px;
+}
+
+.vjs-theme-netflix .vjs-big-play-button .vjs-icon-placeholder:before {
+  font-size: 40px;
+  line-height: 70px;
+  color: var(--vjs-theme-netflix--secondary);
+}
+
+.vjs-theme-netflix .vjs-control-bar {
+  background-color: rgba(20, 20, 20, 0.7);
+  height: 4em;
+}
+
+.vjs-theme-netflix .vjs-button:hover {
+  color: var(--vjs-theme-netflix--primary);
+}
+
+.vjs-theme-netflix .vjs-progress-control .vjs-play-progress {
+  background-color: var(--vjs-theme-netflix--primary);
+}
+
+/* Custom badge for live sync */
+.sync-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background-color: rgba(0, 0, 0, 0.75);
+  color: #46D369;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
