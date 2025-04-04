@@ -65,15 +65,24 @@ export const signInWithGoogle = async () => {
       switch (error.code) {
         case 'auth/popup-blocked':
           console.error("Popup was blocked by the browser");
+          alert("Pop-up was blocked by the browser. Please allow pop-ups for this site to sign in with Google.");
           break;
         case 'auth/popup-closed-by-user':
           console.error("Popup was closed by the user");
+          // This is a user action, no need for an alert
           break;
         case 'auth/unauthorized-domain':
           console.error("The domain is not authorized in Firebase");
+          alert("This domain is not authorized in your Firebase project. Please add this domain to the authorized domains list in the Firebase console: Authentication → Settings → Authorized domains");
+          // Fallback to regular login
+          if (window.confirm("Would you like to sign in with username/password instead?")) {
+            // Redirect to admin login page
+            window.location.href = '/auth';
+          }
           break;
         default:
           console.error("Other Firebase error");
+          alert(`Authentication error: ${error.message}`);
       }
     }
     
@@ -83,7 +92,22 @@ export const signInWithGoogle = async () => {
 
 // Sign in with Google using redirect (better for mobile)
 export const signInWithGoogleRedirect = () => {
-  signInWithRedirect(auth, googleProvider);
+  try {
+    signInWithRedirect(auth, googleProvider);
+  } catch (error: any) {
+    console.error("Error initiating redirect sign-in:", error);
+    
+    if (error.code === 'auth/unauthorized-domain') {
+      alert("This domain is not authorized in your Firebase project. Please add this domain to the authorized domains list in the Firebase console: Authentication → Settings → Authorized domains");
+      // Fallback to regular login
+      if (window.confirm("Would you like to sign in with username/password instead?")) {
+        // Redirect to admin login page
+        window.location.href = '/auth';
+      }
+    } else {
+      alert(`Authentication error: ${error.message}`);
+    }
+  }
 };
 
 // Process redirect result
@@ -109,8 +133,26 @@ export const processRedirectResult = async () => {
       return user;
     }
     return null;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error processing redirect result:", error);
+    
+    if (error.code) {
+      switch (error.code) {
+        case 'auth/unauthorized-domain':
+          console.error("The domain is not authorized in Firebase");
+          alert("This domain is not authorized in your Firebase project. Please add this domain to the authorized domains list in the Firebase console: Authentication → Settings → Authorized domains");
+          // Fallback to regular login
+          if (window.confirm("Would you like to sign in with username/password instead?")) {
+            // Redirect to admin login page
+            window.location.href = '/auth';
+          }
+          break;
+        default:
+          console.error("Other Firebase error");
+          alert(`Authentication error: ${error.message}`);
+      }
+    }
+    
     throw error;
   }
 };

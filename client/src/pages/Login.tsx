@@ -143,6 +143,15 @@ const Login = () => {
                 <div className="text-center text-sm text-gray-400">
                   <p>This is a demo application.</p>
                   <p>Click "Sign in with Google" to continue as a user.</p>
+                  <div className="mt-4 p-3 bg-yellow-900/30 border border-yellow-800 rounded-md text-left">
+                    <p className="font-medium text-yellow-500 mb-1">Firebase Authorization Note:</p>
+                    <p>If you see an "unauthorized domain" error, add your Replit domain to Firebase:</p>
+                    <ol className="list-decimal ml-5 space-y-1 mt-1">
+                      <li>Go to Firebase console</li>
+                      <li>Select Authentication → Settings</li>
+                      <li>Add your domain to "Authorized domains"</li>
+                    </ol>
+                  </div>
                 </div>
               </CardContent>
             </Card>
