@@ -77,6 +77,12 @@ export const insertVideoSchema = createInsertSchema(videos)
     startTime: true,
     endTime: true,
     scheduledAt: true,
+  })
+  // Override startTime and endTime fields to use coerce.date() for proper handling
+  .extend({
+    startTime: z.coerce.date().optional(),
+    endTime: z.coerce.date().optional(),
+    scheduledAt: z.coerce.date().optional(),
   });
 
 // Streams table for live and scheduled streams
@@ -110,6 +116,11 @@ export const insertStreamSchema = createInsertSchema(streams)
     thumbnailUrl: true,
     endTime: true,
     viewerCount: true,
+  })
+  // Override date fields to use coerce.date() for proper handling
+  .extend({
+    startTime: z.coerce.date(),
+    endTime: z.coerce.date().optional(),
   });
 
 // ViewerSessions to track active viewers and their timestamp

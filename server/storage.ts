@@ -100,6 +100,8 @@ export class MemStorage implements IStorage {
       password: "adminPassword", // In production, this would be hashed
       role: UserRole.ADMIN,
       displayName: "Admin User",
+      photoURL: null,
+      firebaseUid: null,
       createdAt: new Date()
     };
     this.users.set(adminUser.id, adminUser);
