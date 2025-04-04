@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import express, { NextFunction } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storage as dbStorage } from "./storage";
 import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -55,7 +55,7 @@ function requireRole(roles: UserRole[]) {
       return res.status(401).json({ message: "Unauthorized" });
     }
     
-    const user = await storage.getUser(req.session.userId);
+    const user = await dbStorage.getUser(req.session.userId);
     if (!user || !roles.includes(user.role as UserRole)) {
       return res.status(403).json({ message: "Forbidden: Insufficient permissions" });
     }
@@ -86,19 +86,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     // Check if user already exists
-    const existingEmail = await storage.getUserByEmail(validation.data.email);
+    const existingEmail = await dbStorage.getUserByEmail(validation.data.email);
     if (existingEmail) {
       return res.status(400).json({ message: "Email already registered" });
     }
     
-    const existingUsername = await storage.getUserByUsername(validation.data.username);
+    const existingUsername = await dbStorage.getUserByUsername(validation.data.username);
     if (existingUsername) {
       return res.status(400).json({ message: "Username already taken" });
     }
     
     // Create new user
     try {
-      const user = await storage.createUser(validation.data);
+      const user = await dbStorage.createUser(validation.data);
       // Don't return password in response
       const { password, ...userWithoutPassword } = user;
       
@@ -121,20 +121,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     // Check if user exists by Firebase UID
-    let user = await storage.getUserByFirebaseUid(firebaseUid);
+    let user = await dbStorage.getUserByFirebaseUid(firebaseUid);
     
     if (!user) {
       // Check if user exists by email
-      user = await storage.getUserByEmail(email);
+      user = await dbStorage.getUserByEmail(email);
       
       if (user) {
         // Update existing user with Firebase UID
-        user = await storage.updateUser(user.id, { firebaseUid });
+        user = await dbStorage.updateUser(user.id, { firebaseUid });
       } else {
         // Create new user
         const username = email.split('@')[0] + '_' + Math.floor(Math.random() * 10000);
         
-        user = await storage.createUser({
+        user = await dbStorage.createUser({
           username,
           email,
           firebaseUid,
@@ -172,9 +172,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     // Find user by username or email
-    let user = await storage.getUserByUsername(username);
+    let user = await dbStorage.getUserByUsername(username);
     if (!user) {
-      user = await storage.getUserByEmail(username);
+      user = await dbStorage.getUserByEmail(username);
     }
     
     if (!user || user.password !== password) {
@@ -212,7 +212,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(401).json({ message: "Not authenticated" });
     }
     
-    const user = await storage.getUser(req.session.userId);
+    const user = await dbStorage.getUser(req.session.userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -233,9 +233,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     let videos;
     if (category) {
-      videos = await storage.getVideosByCategory(category);
+      videos = await dbStorage.getVideosByCategory(category);
     } else {
-      videos = await storage.getVideos();
+      videos = await dbStorage.getVideos();
     }
     
     // Filter videos based on visibility rules:
@@ -261,7 +261,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ message: "Invalid ID format" });
     }
     
-    const video = await storage.getVideo(id);
+    const video = await dbStorage.getVideo(id);
     if (!video) {
       return res.status(404).json({ message: "Video not found" });
     }
@@ -295,7 +295,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User ID is required" });
       }
       
-      const video = await storage.createVideo({
+      const video = await dbStorage.createVideo({
         ...validation.data,
         userId: req.session.userId
       });
@@ -316,21 +316,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ message: validation.error });
     }
     
-    const video = await storage.getVideo(id);
+    const video = await dbStorage.getVideo(id);
     if (!video) {
       return res.status(404).json({ message: "Video not found" });
     }
     
     // Check if user has permission
     if (req.session?.userId && video.userId !== req.session.userId) {
-      const user = await storage.getUser(req.session.userId);
+      const user = await dbStorage.getUser(req.session.userId);
       if (!user || user.role !== UserRole.ADMIN) {
         return res.status(403).json({ message: "You don't have permission to edit this video" });
       }
     }
     
     try {
-      const updatedVideo = await storage.updateVideo(id, validation.data);
+      const updatedVideo = await dbStorage.updateVideo(id, validation.data);
       res.status(200).json(updatedVideo);
     } catch (error) {
       res.status(500).json({ message: "Failed to update video" });
@@ -344,14 +344,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ message: "Invalid ID format" });
     }
     
-    const video = await storage.getVideo(id);
+    const video = await dbStorage.getVideo(id);
     if (!video) {
       return res.status(404).json({ message: "Video not found" });
     }
     
     // Check if user has permission (admins can toggle any video, channel admins only their own)
     if (req.session?.userId && video.userId !== req.session.userId) {
-      const user = await storage.getUser(req.session.userId);
+      const user = await dbStorage.getUser(req.session.userId);
       if (!user || user.role !== UserRole.ADMIN) {
         return res.status(403).json({ message: "You don't have permission to modify this video" });
       }
@@ -359,7 +359,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       // Toggle the isLive status
-      const updatedVideo = await storage.updateVideo(id, { 
+      const updatedVideo = await dbStorage.updateVideo(id, { 
         isLive: !video.isLive,
         // If making it live again and there's no valid endTime, set it to a future date
         endTime: (!video.isLive && (!video.endTime || new Date(video.endTime) < new Date())) ? 
@@ -386,21 +386,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ message: "Invalid ID format" });
     }
     
-    const video = await storage.getVideo(id);
+    const video = await dbStorage.getVideo(id);
     if (!video) {
       return res.status(404).json({ message: "Video not found" });
     }
     
     // Check if user has permission
     if (req.session?.userId && video.userId !== req.session.userId) {
-      const user = await storage.getUser(req.session.userId);
+      const user = await dbStorage.getUser(req.session.userId);
       if (!user || user.role !== UserRole.ADMIN) {
         return res.status(403).json({ message: "You don't have permission to delete this video" });
       }
     }
     
     try {
-      const success = await storage.deleteVideo(id);
+      const success = await dbStorage.deleteVideo(id);
       if (success) {
         res.status(204).end();
       } else {
@@ -417,7 +417,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const now = new Date();
     
     // Get all streams
-    const liveStreams = await storage.getLiveStreams();
+    const liveStreams = await dbStorage.getLiveStreams();
     
     // Filter streams based on visibility rules if not admin
     if (!isAdmin) {
@@ -438,7 +438,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const now = new Date();
     
     // Get all upcoming streams
-    const upcomingStreams = await storage.getUpcomingStreams();
+    const upcomingStreams = await dbStorage.getUpcomingStreams();
     
     // Filter streams based on visibility rules if not admin
     if (!isAdmin) {
@@ -458,7 +458,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ message: "Invalid ID format" });
     }
     
-    const stream = await storage.getStream(id);
+    const stream = await dbStorage.getStream(id);
     if (!stream) {
       return res.status(404).json({ message: "Stream not found" });
     }
@@ -492,7 +492,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User ID is required" });
       }
       
-      const stream = await storage.createStream({
+      const stream = await dbStorage.createStream({
         ...validation.data,
         userId: req.session.userId
       });
@@ -513,21 +513,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ message: validation.error });
     }
     
-    const stream = await storage.getStream(id);
+    const stream = await dbStorage.getStream(id);
     if (!stream) {
       return res.status(404).json({ message: "Stream not found" });
     }
     
     // Check if user has permission
     if (req.session?.userId && stream.userId !== req.session.userId) {
-      const user = await storage.getUser(req.session.userId);
+      const user = await dbStorage.getUser(req.session.userId);
       if (!user || user.role !== UserRole.ADMIN) {
         return res.status(403).json({ message: "You don't have permission to edit this stream" });
       }
     }
     
     try {
-      const updatedStream = await storage.updateStream(id, validation.data);
+      const updatedStream = await dbStorage.updateStream(id, validation.data);
       res.status(200).json(updatedStream);
     } catch (error) {
       res.status(500).json({ message: "Failed to update stream" });
@@ -541,14 +541,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ message: "Invalid ID format" });
     }
     
-    const stream = await storage.getStream(id);
+    const stream = await dbStorage.getStream(id);
     if (!stream) {
       return res.status(404).json({ message: "Stream not found" });
     }
     
     // Check if user has permission (admins can toggle any stream, channel admins only their own)
     if (req.session?.userId && stream.userId !== req.session.userId) {
-      const user = await storage.getUser(req.session.userId);
+      const user = await dbStorage.getUser(req.session.userId);
       if (!user || user.role !== UserRole.ADMIN) {
         return res.status(403).json({ message: "You don't have permission to modify this stream" });
       }
@@ -556,7 +556,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       // Toggle the isLive status
-      const updatedStream = await storage.updateStream(id, { 
+      const updatedStream = await dbStorage.updateStream(id, { 
         isLive: !stream.isLive,
         // If making it live again and there's no valid endTime, set it to a future date
         endTime: (!stream.isLive && (!stream.endTime || new Date(stream.endTime) < new Date())) ? 
@@ -583,21 +583,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ message: "Invalid ID format" });
     }
     
-    const stream = await storage.getStream(id);
+    const stream = await dbStorage.getStream(id);
     if (!stream) {
       return res.status(404).json({ message: "Stream not found" });
     }
     
     // Check if user has permission
     if (req.session?.userId && stream.userId !== req.session.userId) {
-      const user = await storage.getUser(req.session.userId);
+      const user = await dbStorage.getUser(req.session.userId);
       if (!user || user.role !== UserRole.ADMIN) {
         return res.status(403).json({ message: "You don't have permission to delete this stream" });
       }
     }
     
     try {
-      const success = await storage.deleteStream(id);
+      const success = await dbStorage.deleteStream(id);
       if (success) {
         res.status(204).end();
       } else {
@@ -620,7 +620,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User ID is required" });
       }
       
-      const session = await storage.createViewerSession({
+      const session = await dbStorage.createViewerSession({
         ...validation.data,
         userId: req.session.userId,
         isActive: true
@@ -642,7 +642,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ message: "Current timestamp is required" });
     }
     
-    const session = await storage.getViewerSession(id);
+    const session = await dbStorage.getViewerSession(id);
     if (!session) {
       return res.status(404).json({ message: "Viewer session not found" });
     }
@@ -653,7 +653,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const updatedSession = await storage.updateViewerSession(id, { 
+      const updatedSession = await dbStorage.updateViewerSession(id, { 
         currentTimestamp: Number(currentTimestamp),
         isActive: true
       });
@@ -669,7 +669,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ message: "Invalid ID format" });
     }
     
-    const session = await storage.getViewerSession(id);
+    const session = await dbStorage.getViewerSession(id);
     if (!session) {
       return res.status(404).json({ message: "Viewer session not found" });
     }
@@ -680,7 +680,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const endedSession = await storage.endViewerSession(id);
+      const endedSession = await dbStorage.endViewerSession(id);
       res.status(200).json(endedSession);
     } catch (error) {
       res.status(500).json({ message: "Failed to end viewer session" });
@@ -692,7 +692,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const streamId = req.query.streamId ? parseInt(req.query.streamId as string) : undefined;
     
     try {
-      const activeSessions = await storage.getActiveViewerSessions(videoId, streamId);
+      const activeSessions = await dbStorage.getActiveViewerSessions(videoId, streamId);
       res.status(200).json(activeSessions);
     } catch (error) {
       res.status(500).json({ message: "Failed to get active viewer sessions" });
@@ -705,7 +705,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.session?.userId) {
         return res.status(400).json({ message: "User ID is required" });
       }
-      const notifications = await storage.getNotifications(req.session.userId);
+      const notifications = await dbStorage.getNotifications(req.session.userId);
       res.status(200).json(notifications);
     } catch (error) {
       res.status(500).json({ message: "Failed to get notifications" });
@@ -717,7 +717,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.session?.userId) {
         return res.status(400).json({ message: "User ID is required" });
       }
-      const unreadNotifications = await storage.getUnreadNotifications(req.session.userId);
+      const unreadNotifications = await dbStorage.getUnreadNotifications(req.session.userId);
       res.status(200).json(unreadNotifications);
     } catch (error) {
       res.status(500).json({ message: "Failed to get unread notifications" });
@@ -731,7 +731,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const notification = await storage.createNotification(validation.data);
+      const notification = await dbStorage.createNotification(validation.data);
       res.status(201).json(notification);
     } catch (error) {
       res.status(500).json({ message: "Failed to create notification" });
@@ -748,7 +748,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ message: "User ID is required" });
     }
     
-    const notification = await storage.getNotifications(req.session.userId)
+    const notification = await dbStorage.getNotifications(req.session.userId)
       .then(notifications => notifications.find(n => n.id === id));
     
     if (!notification) {
@@ -756,7 +756,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const updatedNotification = await storage.markNotificationAsRead(id);
+      const updatedNotification = await dbStorage.markNotificationAsRead(id);
       res.status(200).json(updatedNotification);
     } catch (error) {
       res.status(500).json({ message: "Failed to mark notification as read" });
@@ -773,7 +773,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ message: "User ID is required" });
     }
     
-    const notification = await storage.getNotifications(req.session.userId)
+    const notification = await dbStorage.getNotifications(req.session.userId)
       .then(notifications => notifications.find(n => n.id === id));
     
     if (!notification) {
@@ -781,7 +781,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const success = await storage.deleteNotification(id);
+      const success = await dbStorage.deleteNotification(id);
       if (success) {
         res.status(204).end();
       } else {
@@ -868,7 +868,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const filePath = `/uploads/${req.file.filename}`;
       
       // Update user profile
-      const updatedUser = await storage.updateUser(req.session.userId, {
+      const updatedUser = await dbStorage.updateUser(req.session.userId, {
         photoURL: filePath
       });
       
@@ -919,7 +919,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       // Get all completed viewer sessions for the user
-      const sessions = await storage.getActiveViewerSessions();
+      const sessions = await dbStorage.getActiveViewerSessions();
       const userSessions = sessions.filter(session => session.userId === req.session?.userId);
       
       // Get video and stream details
@@ -927,9 +927,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let mediaContent;
         
         if (session.videoId) {
-          mediaContent = await storage.getVideo(session.videoId);
+          mediaContent = await dbStorage.getVideo(session.videoId);
         } else if (session.streamId) {
-          mediaContent = await storage.getStream(session.streamId);
+          mediaContent = await dbStorage.getStream(session.streamId);
         }
         
         if (!mediaContent) return null;
@@ -956,9 +956,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Add user management endpoint for Admin
   app.get('/api/users', requireAuth, requireRole([UserRole.ADMIN]), async (req, res) => {
     try {
-      // This endpoint requires implementation in storage.ts
+      // This endpoint requires implementation in dbStorage.ts
       // For now, we'll return all users without password
-      const users = await storage.getAllUsers();
+      const users = await dbStorage.getAllUsers();
       const safeUsers = users.map(user => ({
         ...user,
         password: undefined
@@ -979,7 +979,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       // Search in videos
-      const videos = await storage.getVideos();
+      const videos = await dbStorage.getVideos();
       const filteredVideos = videos.filter(video => 
         video.title.toLowerCase().includes(query.toLowerCase()) || 
         (video.description && video.description.toLowerCase().includes(query.toLowerCase())) ||
@@ -987,8 +987,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       
       // Search in streams
-      const streams = await storage.getLiveStreams();
-      const upcomingStreams = await storage.getUpcomingStreams();
+      const streams = await dbStorage.getLiveStreams();
+      const upcomingStreams = await dbStorage.getUpcomingStreams();
       const allStreams = [...streams, ...upcomingStreams];
       
       const filteredStreams = allStreams.filter(stream => 
@@ -1047,7 +1047,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Update the viewer session in the database
           if (data.sessionId) {
-            await storage.updateViewerSession(data.sessionId, {
+            await dbStorage.updateViewerSession(data.sessionId, {
               currentTimestamp: data.currentTime,
               isActive: true
             });
