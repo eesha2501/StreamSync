@@ -10,19 +10,36 @@ dotenv.config();
 connectDB();
 
 const app = express();
-app.use(cors({ origin: 'https://streamsync-web.vercel.app' }));
+
+
+const allowedOrigins = [
+    'http://localhost:3000', // For local development
+    'https://your-vercel-app-url.vercel.app' 
+];
+
+app.use(cors({
+    origin: function (origin, callback) {
+        // allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) === -1) {
+            const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+            return callback(new Error(msg), false);
+        }
+        return callback(null, true);
+    }
+}));
+
+
+
 app.use(express.json());
 
-// --- NEW DEBUGGING MIDDLEWARE ---
-// This will log every single request that comes into the server.
+// This will log every single request that comes into the server for debugging.
 app.use((req, res, next) => {
     console.log(`Request received: ${req.method} ${req.url}`);
     next();
 });
 
-// --- THE CORRECTED STATIC PATH ---
-// This tells Express to serve files from the 'uploads' folder
-// when a request comes in for '/uploads'.
+// Serve static files from the 'uploads' folder
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 
