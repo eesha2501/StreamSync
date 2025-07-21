@@ -10,7 +10,7 @@ dotenv.config();
 connectDB();
 
 const app = express();
-app.use(cors({ origin: 'https://streamsync-web.vercel.app/' }));
+app.use(cors({ origin: 'https://streamsync-web.vercel.app' }));
 app.use(express.json());
 
 // --- NEW DEBUGGING MIDDLEWARE ---
