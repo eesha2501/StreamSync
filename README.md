@@ -12,7 +12,7 @@ The platform features a stunning, responsive landing page, a sleek Netflix-inspi
 - **Backend**: Node.js, Express.js  
 - **Database**: MongoDB with Mongoose  
 - **Authentication**: JSON Web Tokens (JWT)  
-- **File Uploads**: Multer
+- **File Uploads**: Multer  
 
 ---
 
@@ -20,10 +20,10 @@ The platform features a stunning, responsive landing page, a sleek Netflix-inspi
 
 ### 🖥 User Experience
 
-- 🎬 **Stunning Landing Page**: Fully responsive, modern design to attract users.
-- 🔐 **Popup Authentication**: Glass-effect login/register modal.
-- 📺 **Netflix-Style Dashboard**: Dark theme, icon-based sidebar.
-- 🎞 **Dynamic Hero Carousel**: Auto-playing slider showcasing admin-selected videos.
+- 🎬 **Stunning Landing Page**: Fully responsive, modern design to attract users.  
+- 🔐 **Popup Authentication**: Glass-effect login/register modal.  
+- 📺 **Netflix-Style Dashboard**: Dark theme, icon-based sidebar.  
+- 🎞 **Dynamic Hero Carousel**: Auto-playing slider showcasing admin-selected videos.  
 - 🧱 **Content Carousels**:
   - 🔴 **Live Now**: Currently streaming based on schedule.
   - 🔥 **Featured**: Promoted videos.
@@ -37,7 +37,7 @@ The platform features a stunning, responsive landing page, a sleek Netflix-inspi
 
 ### 🛠 Admin Panel
 
-- 🧭 **Professional Layout**: Fully responsive with persistent sidebar.
+- 🧭 **Professional Layout**: Fully responsive with persistent sidebar.  
 - 📊 **Real-Data Analytics**:
   - Total users & videos
   - 📈 Line chart (last 7 days new users)
@@ -54,40 +54,38 @@ The platform features a stunning, responsive landing page, a sleek Netflix-inspi
 
 ## 📁 Folder Structure
 
+\`\`\`bash
 /streamsync
-├── client/ # React Frontend
-│ ├── public/
-│ │ └── logo.png
-│ └── src/
-│ ├── api/
-│ ├── components/
-│ ├── context/
-│ ├── pages/
-│ ├── App.js
-│ └── index.js
+├── client/         # React Frontend
+│   ├── public/
+│   │   └── logo.png
+│   └── src/
+│       ├── api/
+│       ├── components/
+│       ├── context/
+│       ├── pages/
+│       ├── App.js
+│       └── index.js
 │
-└── server/ # Node.js Backend
-├── config/
-├── controllers/
-├── middleware/
-├── models/
-├── routes/
-├── uploads/ # Stores uploaded videos & thumbnails
-└── server.js
-
-yaml
-Copy
-Edit
+└── server/         # Node.js Backend
+    ├── config/
+    ├── controllers/
+    ├── middleware/
+    ├── models/
+    ├── routes/
+    ├── uploads/    # Stores uploaded videos & thumbnails
+    └── server.js
+\`\`\`
 
 ---
 
 ## 🧪 Prerequisites
 
-Ensure the following are installed:
+Make sure the following are installed:
 
-- Node.js (v14 or higher)
-- npm (comes with Node.js)
-- MongoDB (local or [MongoDB Atlas](https://www.mongodb.com/atlas))
+- Node.js (v14 or higher)  
+- npm (comes with Node.js)  
+- MongoDB (local or MongoDB Atlas)  
 
 ---
 
@@ -95,94 +93,111 @@ Ensure the following are installed:
 
 ### 1. Backend Setup
 
-```bash
+\`\`\`bash
 # Navigate to the backend
 cd server
 
 # Install dependencies
 npm install
-Create a .env file in the server/ directory:
+\`\`\`
 
-env
-Copy
-Edit
+Create a `.env` file in the `server/` directory and add:
+
+\`\`\`env
 PORT=5000
 MONGO_URI=mongodb://localhost:27017/streamsync
 JWT_SECRET=your_super_secret_jwt_key_that_is_long_and_random
 GLOBAL_START_TIME=2025-01-01T00:00:00Z
-2. Frontend Setup
-bash
-Copy
-Edit
+\`\`\`
+
+---
+
+### 2. Frontend Setup
+
+\`\`\`bash
 # Navigate to the frontend
 cd ../client
 
 # Install dependencies
 npm install
-Create a .env file in the client/ directory:
+\`\`\`
 
-env
-Copy
-Edit
+Create a `.env` file in the `client/` directory and add:
+
+\`\`\`env
 REACT_APP_API_URL=http://localhost:5000/api
-3. Add Logo
-Place your logo at:
-
-arduino
-Copy
-Edit
-client/public/logo.png
-🏃 Running the Application
-Terminal 1: Start Backend
-bash
-Copy
-Edit
-cd server
-nodemon server.js
-Expected output:
-
-arduino
-Copy
-Edit
-Server is running...
-MongoDB Connected...
-Terminal 2: Start Frontend
-bash
-Copy
-Edit
-cd client
-npm start
-App launches at: http://localhost:3000
-
-🧪 Try It Out
-Register a new user.
-
-Promote the user to admin via MongoDB.
-
-Log in as admin and start managing videos.
-
-Schedule content and assign to dashboard sections.
-
-Experience real-time global sync streaming!
-
-📌 Notes
-All scheduling is based on the universal GLOBAL_START_TIME.
-
-This app simulates live syncing — it does not implement true real-time video sync (e.g., via WebRTC).
-
-📃 License
-MIT © 2025 StreamSync Contributors
-
-🙌 Contributing
-Pull requests are welcome. Please follow conventional commit standards and keep code clean.
-
-💬 Support
-For issues or suggestions, open a GitHub issue or contact the maintainer.
-
-yaml
-Copy
-Edit
+\`\`\`
 
 ---
 
-Let me know if you want a downloadable `.md` file, GitHub-specific optimizations (like badges or shie
+### 3. Add Logo
+
+Place your logo here:
+
+\`\`\`bash
+client/public/logo.png
+\`\`\`
+
+---
+
+## 🏃 Running the Application
+
+### Terminal 1: Start Backend
+
+\`\`\`bash
+cd server
+nodemon server.js
+\`\`\`
+
+Expected output:
+
+\`\`\`bash
+Server is running...
+MongoDB Connected...
+\`\`\`
+
+---
+
+### Terminal 2: Start Frontend
+
+\`\`\`bash
+cd client
+npm start
+\`\`\`
+
+Visit: [http://localhost:3000](http://localhost:3000)
+
+---
+
+## 🧪 Try It Out
+
+1. Register a new user  
+2. Promote the user to admin manually via MongoDB  
+3. Log in as admin and start adding videos  
+4. Schedule content and assign it to dashboard sections  
+5. Experience simulated real-time global sync streaming  
+
+---
+
+## 📌 Notes
+
+- All times are based on the `GLOBAL_START_TIME`
+- This is a simulated live sync system. Real-time WebRTC-style synchronization is **not** implemented
+
+---
+
+## 📃 License
+
+MIT © 2025 StreamSync Contributors
+
+---
+
+## 🙌 Contributing
+
+Pull requests are welcome. Please use conventional commits and write clean, testable code.
+
+---
+
+## 💬 Support
+
+For bugs, feedback, or contributions, open a GitHub issue or contact the maintainer.
