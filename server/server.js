@@ -14,7 +14,7 @@ const app = express();
 
 const allowedOrigins = [
     'http://localhost:3000', // For local development
-    'https://your-vercel-app-url.vercel.app' 
+    'https://streamsync-web.vercel.app' 
 ];
 
 app.use(cors({
