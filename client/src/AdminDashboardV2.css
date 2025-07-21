@@ -1,0 +1,242 @@
+/* client/src/AdminDashboardV2.css */
+
+/* --- Main Layout --- */
+.admin-layout-flex {
+    display: flex;
+    height: 100vh;
+    background-color: #0f0f12;
+    color: #e5e7eb;
+}
+
+.admin-sidebar {
+    width: 256px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    background-color: #1a1a1f;
+}
+
+.admin-main-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* --- Sidebar Styles --- */
+.sidebar-header {
+    height: 5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid #374151;
+}
+
+.sidebar-brand-text {
+    font-size: 1.5rem;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    color: #8B5CF6;
+}
+
+.sidebar-nav {
+    flex-grow: 1;
+    padding: 1.5rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    text-decoration: none;
+    color: #e5e7eb;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    border: none;
+    background: none;
+    cursor: pointer;
+    width: 100%;
+    font-size: 1rem;
+}
+
+.sidebar-link.active, .sidebar-link:hover {
+    background-color: #8B5CF6;
+    color: white;
+}
+
+.sidebar-link svg {
+    height: 1.5rem;
+    width: 1.5rem;
+    color: #9ca3af;
+    transition: color 0.2s ease;
+}
+
+.sidebar-link.active svg, .sidebar-link:hover svg {
+    color: white;
+}
+
+/* --- Main Content Header --- */
+.main-header {
+    height: 5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2rem;
+    border-bottom: 1px solid #374151;
+    flex-shrink: 0;
+}
+
+.main-header-title {
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.add-content-btn {
+    background-color: #7c3aed;
+    color: white;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    text-decoration: none;
+}
+.add-content-btn:hover {
+    background-color: #6d28d9;
+}
+
+.admin-profile {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    position: relative;
+    cursor: pointer;
+}
+.admin-profile img {
+    height: 2.5rem;
+    width: 2.5rem;
+    border-radius: 50%;
+}
+.admin-profile-info .name {
+    font-weight: 600;
+}
+.admin-profile-info .role {
+    font-size: 0.75rem;
+    color: #9ca3af;
+}
+
+/* --- CORRECTED Profile Dropdown --- */
+.profile-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 0.5rem;
+    width: 12rem;
+    background-color: #1a1a1f;
+    border: 1px solid #4b5563;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 15px rgba(0,0,0,0.25);
+    z-index: 110;
+    overflow: hidden;
+    height:30px;
+    margin-left: -200px;
+}
+.profile-dropdown button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    color: #d1d5db;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+}
+.profile-dropdown button:hover {
+    background-color: #4b5563;
+}
+
+/* --- Main Content Area --- */
+.content-area {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 2rem;
+}
+
+/* Stat Cards */
+.stats-grid { display: grid; grid-template-columns: repeat(1, 1fr); gap: 1.5rem; }
+@media (min-width: 768px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1024px) { .stats-grid { grid-template-columns: repeat(4, 1fr); } }
+.stat-card { background-color: #1a1a1f; border: 1px solid #2c2c34; padding: 1.5rem; border-radius: 0.5rem; }
+.stat-card .label { font-size: 0.875rem; color: #9ca3af; }
+.stat-card .value { font-size: 1.875rem; font-weight: bold; margin-top: 0.25rem; }
+.stat-card .status-healthy { color: #22c55e; display: flex; align-items: center; gap: 0.5rem; }
+.stat-card .status-healthy .dot { width: 0.75rem; height: 0.75rem; background-color: #22c55e; border-radius: 50%; }
+
+/* Charts */
+.charts-grid { margin-top: 2rem; display: grid; grid-template-columns: repeat(1, 1fr); gap: 1.5rem; }
+@media (min-width: 1024px) { .charts-grid { grid-template-columns: 2fr 1fr; } }
+.chart-container-wrapper { background-color: #1a1a1f; border: 1px solid #2c2c34; padding: 1.5rem; border-radius: 0.5rem; }
+.chart-container-wrapper h3 { font-weight: 600; margin-bottom: 1rem; }
+
+/* Table */
+.table-container { margin-top: 2rem; }
+.table-title { font-size: 1.25rem; font-weight: bold; margin-bottom: 1rem; }
+.table-wrapper { background-color: #1a1a1f; border: 1px solid #2c2c34; border-radius: 0.5rem; overflow-x: auto; }
+.table-wrapper table { width: 100%; text-align: left; border-collapse: collapse; }
+.table-header { background-color: #2c2c34; }
+.table-header th { padding: 1rem; font-weight: 600; white-space: nowrap; }
+.table-row { border-top: 1px solid #374151; }
+.table-row:hover { background-color: #2c2c34; }
+.table-row td { padding: 1rem; white-space: nowrap; }
+.table-user-cell { display: flex; align-items: center; gap: 0.75rem; }
+.table-user-cell img { border-radius: 50%; }
+.status-badge { font-size: 0.75rem; font-weight: 600; padding: 0.25rem 0.5rem; border-radius: 9999px; text-transform: capitalize; }
+.status-badge.published { background-color: rgba(34, 197, 94, 0.2); color: #4ade80; }
+.status-badge.scheduled { background-color: rgba(234, 179, 8, 0.2); color: #facc15; }
+.status-badge.archived { background-color: rgba(107, 114, 128, 0.2); color: #9ca3af; }
+.table-actions { display: flex; gap: 0.5rem; }
+.table-action-btn { color: #9ca3af; background: none; border: none; cursor: pointer; padding: 0.25rem; }
+.table-action-btn:hover { color: white; }
+.delete-btn:hover { color: #f87171; }
+.role-select { background-color: #374151; border: 1px solid #4b5563; color: white; border-radius: 0.25rem; padding: 0.25rem; }
+
+/* --- THIS IS THE FIX --- */
+.table-action-btn svg {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+/* --- Add User Form --- */
+.add-user-form { display: grid; grid-template-columns: repeat(1, 1fr); gap: 1rem; padding: 1.5rem; background-color: #1a1a1f; border: 1px solid #2c2c34; border-radius: 0.5rem; margin-bottom: 2rem; }
+@media (min-width: 1024px) { .add-user-form { grid-template-columns: 2fr 2fr 2fr 1fr auto; } }
+.add-user-form input, .add-user-form select { width: 100%; box-sizing: border-box; background-color: #2c2c34; border: 1px solid #4b5563; color: white; padding: 0.75rem; border-radius: 0.25rem; }
+.add-user-form button { padding: 0.75rem; background-color: #7c3aed; color: white; font-weight: 600; border: none; border-radius: 0.25rem; cursor: pointer; height: 100%; }
+
+/* --- Modal Styles --- */
+.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.modal-content { background-color: #1a1a1f; padding: 2rem; border-radius: 0.5rem; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+.modal-title { font-size: 1.5rem; font-weight: bold; }
+.modal-close-btn { background: none; border: none; color: #9ca3af; font-size: 1.5rem; cursor: pointer; }
+.modal-form .form-group { margin-bottom: 1rem; }
+.modal-form label { display: block; margin-bottom: 0.5rem; font-weight: 500; }
+.modal-form input, .modal-form textarea, .modal-form select { width: 100%; box-sizing: border-box; background-color: #2c2c34; border: 1px solid #4b5563; color: white; padding: 0.75rem; border-radius: 0.25rem; }
+.modal-form textarea { min-height: 100px; }
+.modal-form .checkbox-group { display: flex; gap: 1rem; align-items: center; }
+.modal-form .checkbox-group label { margin-bottom: 0; }
+.modal-form button { width: 100%; padding: 0.75rem; background-color: #7c3aed; color: white; font-weight: 600; border: none; border-radius: 0.25rem; cursor: pointer; margin-top: 1rem; }
+
+.hidden { display: none; }
